@@ -1,11 +1,13 @@
 import streamlit as st
 from streamlit_image_coordinates import streamlit_image_coordinates as img_coords
 from PIL import Image as img
-from src.app_enums import AppStates, Tools
-from src.app_enums import (FirstOrderLineAlgorithms,
-                           SecondOrderLineAlgorithms,
-                           ParametricLinesAlgorithms)
+from src.app_enums import AppStatesEnum, ToolsEnum
+from src.app_enums import (FirstOrderLineAlgorithmsEnum,
+                           SecondOrderLineAlgorithmsEnum,
+                           ParametricLinesAlgorithmsEnum)
 from src.first_order_lines.first_order_lines import FirstOrderLine
+from src.graphics_redactor_backend_api import ShapeDrawer
+from src.additional_math import Point, Pixel
 
 
 class GraphicsRedactorView:
@@ -13,13 +15,13 @@ class GraphicsRedactorView:
     def __init__(self) -> None:
         st.set_page_config('Graphics Redactor', layout='wide')
         if st.session_state.get('app_state') is None:
-            st.session_state['app_state'] = AppStates.initial_render_state
+            st.session_state['app_state'] = AppStatesEnum.initial_render_state
         
         self._state_render_funcs = {
-            AppStates.initial_render_state: self._render_initial,
-            AppStates.canvas_render_state: self._render_canvas,
-            AppStates.load_file_state: self._render_load,
-            AppStates.save_file_state: self._render_save,
+            AppStatesEnum.initial_render_state: self._render_initial,
+            AppStatesEnum.canvas_render_state: self._render_canvas,
+            AppStatesEnum.load_file_state: self._render_load,
+            AppStatesEnum.save_file_state: self._render_save,
             None: self._render_initial
         }
 
@@ -63,23 +65,24 @@ class GraphicsRedactorView:
                 tool_select = st.radio(
                     label='Select tool',
                     options=[
-                        Tools.first_order_line,
-                        Tools.second_order_line,
-                        Tools.parametric_line,
-                        Tools.transforming
+                        ToolsEnum.first_order_line,
+                        ToolsEnum.second_order_line,
+                        ToolsEnum.parametric_line,
+                        ToolsEnum.transforming
                     ],
                     format_func=self._tool_format_func,
                     key='tool_selector'
                 )
                 if tool_select:
-                    self._render_tool_algorithms(tool_col)
+                    self._render_tool_algorithms(tool_col)                
             with canvas_col:                
                 click_coords = img_coords(
                     st.session_state['canvas_image'],
-                    key='img_coords'    
+                    key='canvas_click_coords'    
                 )
-                st.write(click_coords)
-                new_img_col, save_img_col, debug_col, blank_col = st.columns([1, 1, 1, 10], gap='small')
+                if click_coords:
+                    self._handle_canvas_click(click_coords)                    
+                new_img_col, save_img_col, debug_col, blank_col = st.columns([2, 2, 2, 10], gap='small')
                 with new_img_col:
                     st.button(label='New image', use_container_width=True)
                 with save_img_col:
@@ -100,29 +103,31 @@ class GraphicsRedactorView:
         height = st.session_state.get('image_height_input')
         st.session_state['canvas_image'] = img.new('RGB', (width, height), color='white')
         st.session_state['canvas_figures'] = dict()
-        self._switch_to_canvas()
+        st.session_state['drawer'] = ShapeDrawer(st.session_state['canvas_image'])
+        st.session_state['point_list'] = None
+        self._switch_to_canvas()       
 
     def _switch_to_canvas(self) -> None:
-        st.session_state['app_state'] = AppStates.canvas_render_state
+        st.session_state['app_state'] = AppStatesEnum.canvas_render_state
 
     def _switch_to_initial(self) -> None:
-        st.session_state['app_state'] = AppStates.initial_render_state
+        st.session_state['app_state'] = AppStatesEnum.initial_render_state
     
     def _tool_format_func(self, option) -> str:
         format_dict = {
-            Tools.first_order_line: 'First order line ―',
-            Tools.second_order_line: 'Second order line ⌒',
-            Tools.parametric_line: 'Parametric line ⟡',
-            Tools.transforming: 'Transforming tool ⌗'
+            ToolsEnum.first_order_line: 'First order line ―',
+            ToolsEnum.second_order_line: 'Second order line ⌒',
+            ToolsEnum.parametric_line: 'Parametric line ⟡',
+            ToolsEnum.transforming: 'Transforming tool ⌗'
         }
         return format_dict[option]
     
     def _render_tool_algorithms(self, tool_col_placeholder) -> None:
         algorithms = {
-            Tools.first_order_line: FirstOrderLineAlgorithms.to_list(),
-            Tools.second_order_line: SecondOrderLineAlgorithms.to_list(),
-            Tools.parametric_line: ParametricLinesAlgorithms.to_list(),
-            Tools.transforming: ['Kiya!']
+            ToolsEnum.first_order_line: FirstOrderLineAlgorithmsEnum.to_list(),
+            ToolsEnum.second_order_line: SecondOrderLineAlgorithmsEnum.to_list(),
+            ToolsEnum.parametric_line: ParametricLinesAlgorithmsEnum.to_list(),
+            ToolsEnum.transforming: ['Kiya!']
         }
         with tool_col_placeholder:
             algorithm_selector = st.selectbox(
@@ -135,22 +140,55 @@ class GraphicsRedactorView:
     
     def _tool_algorithm_format_func(self, option) -> str:
         format_dict = {
-            FirstOrderLineAlgorithms.dda: 'Digital Differential Analyzer',
-            FirstOrderLineAlgorithms.bresenham: 'Bresenham\'s algorithm',
-            FirstOrderLineAlgorithms.wu: 'Wu\'s algorithm',
-            FirstOrderLineAlgorithms.guptasproull: 'Gupta-Sproull algorithm',
+            FirstOrderLineAlgorithmsEnum.dda: 'Digital Differential Analyzer',
+            FirstOrderLineAlgorithmsEnum.bresenham: 'Bresenham\'s algorithm',
+            FirstOrderLineAlgorithmsEnum.wu: 'Wu\'s algorithm',
+            FirstOrderLineAlgorithmsEnum.guptasproull: 'Gupta-Sproull algorithm',
 
-            SecondOrderLineAlgorithms.circumference: 'Circumference',
-            SecondOrderLineAlgorithms.ellipse: 'Ellipse',
-            SecondOrderLineAlgorithms.hyperbola: 'Hyperbola',
-            SecondOrderLineAlgorithms.parabola: 'Parabola',
+            SecondOrderLineAlgorithmsEnum.circumference: 'Circumference',
+            SecondOrderLineAlgorithmsEnum.ellipse: 'Ellipse',
+            SecondOrderLineAlgorithmsEnum.hyperbola: 'Hyperbola',
+            SecondOrderLineAlgorithmsEnum.parabola: 'Parabola',
 
-            ParametricLinesAlgorithms.hermit: 'Hermite shape',
-            ParametricLinesAlgorithms.bezier: 'Bezier\'s curve',
-            ParametricLinesAlgorithms.bspline: 'B-Spline',
+            ParametricLinesAlgorithmsEnum.hermit: 'Hermite shape',
+            ParametricLinesAlgorithmsEnum.bezier: 'Bezier\'s curve',
+            ParametricLinesAlgorithmsEnum.bspline: 'B-Spline',
             
         }
-        return format_dict.get(option, 'Kiya!')        
+        return format_dict.get(option, 'Kiya!')
+
+    def _handle_canvas_click(self, coords) -> None:        
+        if st.session_state.get('points_list') is None:
+            st.session_state['points_list'] = []
+        st.session_state['points_list'].append(Point(
+            coords['x'], coords['y']
+        ))
+        st.write(st.session_state['points_list'])
+        self._handle_shape_drawing()        
+    
+    def _handle_shape_drawing(self) -> None:
+        enough_point_to_draw = {
+            ToolsEnum.first_order_line: {
+                FirstOrderLineAlgorithmsEnum.dda: 2,
+                FirstOrderLineAlgorithmsEnum.bresenham: 2,
+                FirstOrderLineAlgorithmsEnum.wu: 2,
+                FirstOrderLineAlgorithmsEnum.guptasproull: 2
+            }
+        }
+        tool = st.session_state.get('tool_selector')
+        algorithm = st.session_state.get('tool_algorithm')
+        st.write(tool, algorithm)
+        if (len(st.session_state.get('points_list')) >=
+            enough_point_to_draw[tool][algorithm]):
+            st.session_state['drawer'].draw_shape(
+                tool=tool,
+                algorithm=algorithm,
+                points=st.session_state.get('points_list'),
+                color=st.session_state.get('color_selector', '#000000'),
+                alpha=255
+            )            
+            st.session_state['points_list'] = []
+            st.rerun()                 
 
 
 view = GraphicsRedactorView()
