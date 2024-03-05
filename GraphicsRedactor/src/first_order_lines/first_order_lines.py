@@ -33,7 +33,7 @@ class FirstOrderLine:
         x, y = start.x, start.y
         while True:
             px_list.append(
-                Pixel(Point(round(x), round(y)), color)
+                Pixel(Point(round(x), round(y)), color, 255)
             )
             if x == end.x and y == end.y:
                 break
@@ -51,7 +51,7 @@ class FirstOrderLine:
         return px_list
 
     @staticmethod
-    def wu(start: Point, end: Point) -> list:
+    def wu(start: Point, end: Point, color: str = '#000000') -> list[Pixel]:
         pass
 
     @staticmethod
