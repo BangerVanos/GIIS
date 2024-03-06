@@ -1,13 +1,19 @@
 from PIL import Image as img
 import numpy as np
 from src.additional_math import Point, Pixel
-from math import sqrt
+from math import sqrt, floor
 
 
 class FirstOrderLine:
     
     @staticmethod
     def dda(start: Point, end: Point, color: str = '#000000', alpha: int = 255) -> list[Pixel]:
+
+        if start == end:
+            return [
+                Pixel(Point(start.x, start.y), color, alpha)
+            ]
+
         dx = end.x - start.x
         dy = end.y - start.y
         steps_amount = abs(dx) if abs(dx) > abs(dy) else abs(dy)
@@ -68,7 +74,7 @@ class FirstOrderLine:
         dx, dy = x2 - x1, y2 - y1
         steep = abs(dx) < abs(dy)
 
-        p = lambda px, py: ((px, py), (py, px))[steep]
+        p = lambda px, py: ((px, py), (py, px))[int(steep)]
 
         if steep:
             x1, y1 = y1, x1
@@ -76,8 +82,10 @@ class FirstOrderLine:
             dx, dy = dy, dx
         if x2 < x1:
             x1, x2 = x2, x1
+            y1, y2 = y2, y1                                                        
 
-        grad = dy / dx
+        grad = 1 if dx == 0 else dy / dx
+         
         intery = y1 + rfpart(x1) * grad
 
         px_list = []
@@ -87,32 +95,36 @@ class FirstOrderLine:
             xend = round(x)
             yend = y + grad * (xend - x)
             xgap = rfpart(x + 0.5)
-            px, py = int(xend), int(yend)
+            px, py = int(xend), int(floor(yend))
             px_list.append(
-                Pixel(Point(*p(px, py)), color, int(rfpart(yend) * xgap * 255))
+                Pixel(Point(*p(px, py)), color, int(abs(rfpart(yend) * xgap * alpha)))
             )
             px_list.append(
-                Pixel(Point(*p(px, py+1)), color, int(fpart(yend) * xgap * 255))
+                Pixel(Point(*p(px, py+1)), color, int(abs(fpart(yend) * xgap * alpha)))
             )
             return px
 
-        xstart = add_endpoint(p(start.x, start.y)) + 1
-        xend = add_endpoint(p(end.x, end.y))
+        xstart = add_endpoint((x1, y1)) + 1
+        xend = add_endpoint((x2, y2))
+        print(xstart, xend)                
 
-        for x in range(xstart, xend, 1 if xstart <= xend else -1):
+        for x in range(xstart, xend):
             y = int(intery)
             px_list.append(
-                Pixel(Point(*p(x, y)), color, int(abs(rfpart(intery) * 255)))
+                Pixel(Point(*p(x, y)), color, int(abs(rfpart(intery) * alpha)))
             )
             px_list.append(
-                Pixel(Point(*p(x, y+1)), color, int(abs(fpart(intery) * 255)))
+                Pixel(Point(*p(x, y+1)), color, int(abs(fpart(intery) * alpha)))
             )
-            intery += grad       
+            intery += grad      
         
         return px_list
 
     @staticmethod
     def gupta_sproull(start: Point, end: Point, color: str = '#000000', alpha: int = 255) -> list:
+
+        def count_alpha(distance):
+            return int(alpha * (1 - pow(distance * 2 / 3, 2)))
 
         if start == end:
             return [
@@ -125,39 +137,84 @@ class FirstOrderLine:
         dx = end.x - start.x
         dy = end.y - start.y
 
-        sx = 1 if start.x < end.x else -1
-        sy = 1 if start.y < end.y else -1
+        adx = abs(dx)
+        ady = abs(dy)
 
-        d = 2 * dy - dx
+        if adx > ady:
+            du = adx
+            dv = ady
+            u = end.x
+        else:
+            du = ady
+            dv = adx
+            u = end.y
+        
+        sx = 1 if dx > 0 else -1
+        sy = 1 if dy > 0 else -1
 
-        euc_point = 0
-        length = sqrt(dx**2 + dy**2)
+        u_end = u + du
+        d = 2 * dv - du
+        incrS = 2 * dv
+        incrD = 2 * (dv - du)
 
-        sin = dx / length
-        cos = dy / length
+        two_vdu = 0
+        invD = 1 / (2 * sqrt(du**2 + dv**2))
+        invD2u = 2 * du * invD       
 
         px_list: list[Pixel] = []
-        while(x != end.x):
-            px_list.append(
-                Pixel(Point(round(x), round(y) - 1),
-                      color, int(255 - abs(euc_point + cos) // 2))
-            )
-            px_list.append(
-                Pixel(Point(round(x), round(y)),
-                      color, int(255 - abs(euc_point) // 2))
-            )
-            px_list.append(
-                Pixel(Point(round(x), round(y) + 1),
-                      color, int(255 - abs(euc_point - cos) // 2))
-            )
-            
-            x += sx
-            if d <= 0:
-                euc_point += sin
-                d += d * dy
-            else:
-                euc_point += sin - cos
-                d += 2 * (dy - dx)
-                y += sy
+
+        # For better performance, this condition was put forward (even assuming that such code
+        # is 30% bigger)
+        if adx > ady:
+
+            while u < u_end:
+                px_list.append(
+                    Pixel(Point(round(x), round(y)),
+                        color, count_alpha(two_vdu * invD))
+                )
+                px_list.append(
+                    Pixel(Point(round(x), round(y) + sy),
+                        color, count_alpha(invD2u - two_vdu * invD))
+                )
+                px_list.append(
+                    Pixel(Point(round(x), round(y) - sy),
+                        color, count_alpha(invD2u + two_vdu * invD))
+                )
+
+                if d <= 0:
+                    two_vdu = d + du
+                    d += incrS
+                else:
+                    two_vdu = d - du
+                    d += incrD
+                    y += sy
+                u += 1
+                x += sx
+        
+        else:
+
+            while u < u_end:
+                px_list.append(
+                    Pixel(Point(round(x), round(y)),
+                        color, count_alpha(two_vdu * invD))
+                )
+                px_list.append(
+                    Pixel(Point(round(x) + sx, round(y)),
+                        color, count_alpha(invD2u - two_vdu * invD))
+                )
+                px_list.append(
+                    Pixel(Point(round(x) - sx, round(y)),
+                        color, count_alpha(invD2u + two_vdu * invD))
+                )
+
+                if d <= 0:
+                    two_vdu = d + du
+                    d += incrS
+                else:
+                    two_vdu = d - du
+                    d += incrD
+                    x += sx
+                u += 1
+                y += sy        
                              
         return px_list

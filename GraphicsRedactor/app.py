@@ -5,9 +5,8 @@ from src.app_enums import AppStatesEnum, ToolsEnum
 from src.app_enums import (FirstOrderLineAlgorithmsEnum,
                            SecondOrderLineAlgorithmsEnum,
                            ParametricLinesAlgorithmsEnum)
-from src.first_order_lines.first_order_lines import FirstOrderLine
 from src.graphics_redactor_backend_api import ShapeDrawer
-from src.additional_math import Point, Pixel
+from src.additional_math import Point
 
 
 class GraphicsRedactorView:
@@ -50,8 +49,8 @@ class GraphicsRedactorView:
                 key='image_height_input',
                 value=720   
             )        
-            st.button('Canvas test', key='new_canvas_btn',
-                    on_click=self._new_canvas)
+            st.button('New canvas', key='new_canvas_btn',
+                      on_click=self._new_canvas)
 
     def _render_canvas(self) -> None:               
         with self._placeholder.container(border=False):
@@ -84,7 +83,8 @@ class GraphicsRedactorView:
                     self._handle_canvas_click(click_coords)                    
                 new_img_col, save_img_col, debug_col, blank_col = st.columns([2, 2, 2, 10], gap='small')
                 with new_img_col:
-                    st.button(label='New image', use_container_width=True)
+                    st.button(label='Clear canvas', use_container_width=True,
+                              on_click=self._clear_canvas)
                 with save_img_col:
                     st.button(label='Save image', use_container_width=True)
                 with debug_col:
@@ -104,8 +104,15 @@ class GraphicsRedactorView:
         st.session_state['canvas_image'] = img.new('RGB', (width, height), color='white')
         st.session_state['canvas_figures'] = dict()
         st.session_state['drawer'] = ShapeDrawer(st.session_state['canvas_image'])
-        st.session_state['point_list'] = None
-        self._switch_to_canvas()       
+        st.session_state['points_list'] = None
+        self._switch_to_canvas()
+
+    def _clear_canvas(self) -> None:
+        size = st.session_state['canvas_image'].size
+        st.session_state['points_list'] = None
+        st.session_state['canvas_image'] = img.new('RGB', size, color='white')
+        st.session_state['canvas_figures'] = dict()
+        st.session_state['drawer'].set_canvas(st.session_state['canvas_image'])    
 
     def _switch_to_canvas(self) -> None:
         st.session_state['app_state'] = AppStatesEnum.canvas_render_state
@@ -137,6 +144,11 @@ class GraphicsRedactorView:
                 index=0,
                 format_func=self._tool_algorithm_format_func
             )
+
+            if st.session_state.get('tool_selector') == ToolsEnum.parametric_line:
+                st.number_input(label='Choose number of control points',
+                                min_value=4,
+                                key='cpoints_amount_selector')
     
     def _tool_algorithm_format_func(self, option) -> str:
         format_dict = {
@@ -157,37 +169,50 @@ class GraphicsRedactorView:
         }
         return format_dict.get(option, 'Kiya!')
 
-    def _handle_canvas_click(self, coords) -> None:        
+    def _handle_canvas_click(self, coords) -> None:
         if st.session_state.get('points_list') is None:
             st.session_state['points_list'] = []
+            return                
         st.session_state['points_list'].append(Point(
             coords['x'], coords['y']
         ))
-        st.write(st.session_state['points_list'])
-        self._handle_shape_drawing()        
+        self._handle_shape_drawing()                        
     
     def _handle_shape_drawing(self) -> None:
+        if st.session_state.get('cpoints_amount_selector'):
+            parametric_curve_cpoints = st.session_state.get('cpoints_amount_selector')
         enough_point_to_draw = {
             ToolsEnum.first_order_line: {
                 FirstOrderLineAlgorithmsEnum.dda: 2,
                 FirstOrderLineAlgorithmsEnum.bresenham: 2,
                 FirstOrderLineAlgorithmsEnum.wu: 2,
                 FirstOrderLineAlgorithmsEnum.guptasproull: 2
+            },
+
+            ToolsEnum.second_order_line: {
+                SecondOrderLineAlgorithmsEnum.circumference: 2,
+                SecondOrderLineAlgorithmsEnum.ellipse: 2,
+                SecondOrderLineAlgorithmsEnum.hyperbola: 3,
+                SecondOrderLineAlgorithmsEnum.parabola: 2
+            },
+
+            ToolsEnum.parametric_line: {
+                ParametricLinesAlgorithmsEnum.bezier: parametric_curve_cpoints
             }
         }
         tool = st.session_state.get('tool_selector')
-        algorithm = st.session_state.get('tool_algorithm')
-        st.write(tool, algorithm)
-        if (len(st.session_state.get('points_list')) >=
+        algorithm = st.session_state.get('tool_algorithm')        
+        if (len(st.session_state.get('points_list')) ==
             enough_point_to_draw[tool][algorithm]):
+            points = st.session_state['points_list']            
             st.session_state['drawer'].draw_shape(
                 tool=tool,
                 algorithm=algorithm,
-                points=st.session_state.get('points_list'),
+                points=points,
                 color=st.session_state.get('color_selector', '#000000'),
                 alpha=255
-            )            
-            st.session_state['points_list'] = []
+            )
+            st.session_state['points_list'] = None                        
             st.rerun()                 
 
 

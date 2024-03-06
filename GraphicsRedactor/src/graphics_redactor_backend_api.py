@@ -2,7 +2,12 @@ from PIL import Image as img
 from PIL import ImageColor
 from .additional_math import Point, Pixel
 from .first_order_lines.first_order_lines import FirstOrderLine
-from . app_enums import ToolsEnum, FirstOrderLineAlgorithmsEnum
+from .second_order_lines.second_order_lines import SecondOrderLine
+from .parametric_lines.parametric_lines import ParametricLines
+from . app_enums import (ToolsEnum,
+                         FirstOrderLineAlgorithmsEnum,
+                         SecondOrderLineAlgorithmsEnum,
+                         ParametricLinesAlgorithmsEnum)
 
 
 class Drawer:
@@ -15,7 +20,11 @@ class Drawer:
         if len(pil_color) < 4:
             pil_color.append(alpha)
         pil_color = tuple(pil_color)
-        self._canvas.putpixel((int(point.x), int(point.y)), pil_color)
+        try:
+            self._canvas.putpixel((int(point.x), int(point.y)), pil_color)
+        except IndexError as err:
+            print(f'{err}. Tried to put pixel with coords {(point.x, point.y)} '
+                  f'on image of size {self._canvas.size}')
     
     def draw_pixel(self, pixel: Pixel) -> None:
         self.draw_point(pixel.point, pixel.color, pixel.alpha)
@@ -23,6 +32,9 @@ class Drawer:
     def draw_pixels(self, pixels: list[Pixel] | tuple[Pixel]):
         for pixel in pixels:
             self.draw_pixel(pixel)
+    
+    def set_canvas(self, canvas: img.Image) -> None:
+        self._canvas = canvas
 
 
 class ShapeDrawer:
@@ -36,14 +48,31 @@ class ShapeDrawer:
                 FirstOrderLineAlgorithmsEnum.bresenham: FirstOrderLine.bresenham,
                 FirstOrderLineAlgorithmsEnum.wu: FirstOrderLine.wu,
                 FirstOrderLineAlgorithmsEnum.guptasproull: FirstOrderLine.gupta_sproull
+            },
+
+            ToolsEnum.second_order_line: {
+                SecondOrderLineAlgorithmsEnum.circumference: SecondOrderLine.circumference,
+                SecondOrderLineAlgorithmsEnum.ellipse: SecondOrderLine.ellipse,
+                SecondOrderLineAlgorithmsEnum.hyperbola: SecondOrderLine.hyperbola,
+                SecondOrderLineAlgorithmsEnum.parabola: SecondOrderLine.parabola
+            },
+
+            ToolsEnum.parametric_line: {
+                ParametricLinesAlgorithmsEnum.bezier: ParametricLines.bezier
             }
         }
 
     def draw_shape(self, tool: str, algorithm: str, points: list[Point],
-                   color: str = '#000000', alpha: int = 255) -> None:
+                   color: str = '#000000', alpha: int = 255, **kwargs) -> None:
         if tool == ToolsEnum.first_order_line:
             self._draw_first_order_line(algorithm, points[0], points[1],
-                                        color, alpha)        
+                                        color, alpha)
+        elif tool == ToolsEnum.second_order_line:
+            self._draw_second_order_line(algorithm, points,
+                                         color, alpha)
+        elif tool == ToolsEnum.parametric_line:            
+            self._draw_parametric_line(algorithm, points,
+                                       color, alpha, **kwargs)       
     
     def _draw_first_order_line(self, algorithm: str, start: Point, end: Point,
                                color: str = '#000000', alpha: int = 255) -> None:
@@ -52,3 +81,23 @@ class ShapeDrawer:
                 start, end, color, alpha
             )
         )
+    
+    def _draw_second_order_line(self, algorithm: str, points: list[Point],
+                                color: str = '#000000', alpha: int = 255) -> None:
+        self._drawer.draw_pixels(
+            self._shapes_algorithms[ToolsEnum.second_order_line][algorithm](
+                *points, color, alpha
+            )
+        )
+    
+    def _draw_parametric_line(self, algorithm: str, points: list[Point],
+                              color: str = '#000000', alpha: int = 255,
+                              **kwargs) -> None:
+        self._drawer.draw_pixels(
+            self._shapes_algorithms[ToolsEnum.parametric_line][algorithm](
+                points, color, alpha, **kwargs
+            )
+        )
+    
+    def set_canvas(self, canvas: img.Image) -> None:
+        self._drawer.set_canvas(canvas)
