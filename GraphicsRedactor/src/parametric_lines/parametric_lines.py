@@ -11,7 +11,7 @@ class ParametricLines:
         CPOINTSAMOUNT = len(c_points)
         n = CPOINTSAMOUNT - 1
         i = 0
-        steps = 100 if not kwargs.get('steps') else kwargs.get('steps')        
+        steps = 100*CPOINTSAMOUNT if not kwargs.get('steps') else kwargs.get('steps')        
         t = np.linspace(0, 1, steps)        
 
         # binomial coeffs

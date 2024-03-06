@@ -179,8 +179,7 @@ class GraphicsRedactorView:
         self._handle_shape_drawing()                        
     
     def _handle_shape_drawing(self) -> None:
-        if st.session_state.get('cpoints_amount_selector'):
-            parametric_curve_cpoints = st.session_state.get('cpoints_amount_selector')
+        # Handling only first and second order lines        
         enough_point_to_draw = {
             ToolsEnum.first_order_line: {
                 FirstOrderLineAlgorithmsEnum.dda: 2,
@@ -194,12 +193,15 @@ class GraphicsRedactorView:
                 SecondOrderLineAlgorithmsEnum.ellipse: 2,
                 SecondOrderLineAlgorithmsEnum.hyperbola: 3,
                 SecondOrderLineAlgorithmsEnum.parabola: 2
-            },
-
-            ToolsEnum.parametric_line: {
+            } 
+        }
+        # If parametric line tool is chosen, this block will work
+        if st.session_state.get('cpoints_amount_selector'):
+            parametric_curve_cpoints = st.session_state.get('cpoints_amount_selector')
+            enough_point_to_draw[ToolsEnum.parametric_line] = {
                 ParametricLinesAlgorithmsEnum.bezier: parametric_curve_cpoints
             }
-        }
+        
         tool = st.session_state.get('tool_selector')
         algorithm = st.session_state.get('tool_algorithm')        
         if (len(st.session_state.get('points_list')) ==
