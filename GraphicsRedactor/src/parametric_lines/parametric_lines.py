@@ -72,8 +72,6 @@ class ParametricLines:
         px_list: list[Pixel] = [
             Pixel(de_boor(u, t, c_points), color, alpha)
             for u in u_values
-        ]
-        
-        
+        ]             
             
         return px_list            
