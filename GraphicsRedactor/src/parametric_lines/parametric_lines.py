@@ -2,6 +2,8 @@ import numpy as np
 from math import factorial
 from src.additional_math import Pixel, Point
 from numbers import Number
+from scipy.interpolate import BSpline
+from scipy.interpolate import splrep
 
 
 class ParametricLines:
@@ -40,38 +42,79 @@ class ParametricLines:
 
     @classmethod
     def b_spline(cls, c_points: list[Point], color: str = '#000000',
-                 alpha: int = 255, **kwargs) -> list[Pixel]:
-        spline_order = kwargs['order']
-        spline_degree = spline_order - 1
-        steps = (250 * len(c_points) if not kwargs.get('steps') 
-                 else kwargs.get('steps'))                   
-
-        def de_boor(u: float, knots: list[Number], c_points: list[Point]):
-            n = len(c_points) - 1  # Number of control points minus 1
-
-            # Handle corner cases
-            if u <= knots[spline_degree]:
-                return c_points[0]
-            elif u >= knots[n + spline_degree + 1]:
-                return c_points[n]
-
-            # Recursive de Boor's algorithm
-            def de_boor_helper(i, j, u):
-                if j == 1:                    
-                    return c_points[i]
-                else:
-                    alpha = (u - knots[i]) / (knots[i + j] - knots[i])
-                    return (de_boor_helper(i, j - 1, u).scalar_multiply(1 - alpha) +
-                            de_boor_helper(i + 1, j - 1, u).scalar_multiply(alpha))
-
-            return de_boor_helper(spline_degree, spline_degree + 1, u)        
+                 alpha: int = 255, **kwargs) -> list[Pixel]:                
         
-        t = np.linspace(0, 1, len(c_points) + spline_order, endpoint=True)
-        u_values = np.linspace(0, 1, steps) 
-
-        px_list: list[Pixel] = [
-            Pixel(de_boor(u, t, c_points), color, alpha)
-            for u in u_values
-        ]             
+        segments = [c_points[i:i+2] for i in range(len(c_points) - 1)]
+        cp_x_arr = np.array([point.x for point in c_points])
+        srt_cp_x_arr_indx = np.argsort(cp_x_arr)
+        cp_y_arr = np.array([point.y for point in c_points])
+        tck = splrep(cp_x_arr[srt_cp_x_arr_indx],
+                     cp_y_arr[srt_cp_x_arr_indx], s=0, k=3)
+        px_list: list[Pixel] = []        
+        b_spline = BSpline(*tck)
+        for segment in segments:
+            steps = int(segment[0].distance(segment[-1]))
+            x_coords = list(np.linspace(segment[0].x, segment[-1].x, steps))            
+            px_list.extend([
+                Pixel(Point(x, y), color, alpha)
+                for x, y in zip(x_coords, b_spline(x_coords))
+            ])      
             
-        return px_list            
+        return px_list
+
+    @classmethod
+    def hermite(cls, c_points: list[Point], color: str = '#000000',
+                alpha: int = 255, **kwargs) -> list[Pixel]:
+        def t(x: Number, xk: Number, xk1: Number):
+            return (x - xk) / (xk1 - xk)
+
+        def deriv(pk0: Point, pk1: Point, pk2: Point,
+                  xk0: Number, xk1: Number, xk2: Number):
+            
+            if xk1 == xk0:
+                xk0 = 0
+            if xk2 == xk1:
+                xk1 = 0
+
+            return (((pk1 - pk0) / (2 * (xk1 - xk0)))
+                    + ((pk2 - pk1) / (2 * (xk2 - xk1))))
+        
+        def p(t, pk, pk1, mk, mk1, xk, xk1):
+            return (pk * (2 * t**3 - 3 * t**2 + 1) +
+                    mk * (xk1 - xk) * (t**3 - 2 * t**2 + t) +
+                    pk1 * (-2 * t**3 + 3 * t**2) +
+                    mk1 * (t**3 - t**2) * (xk1 - xk))
+        
+        px_list: list[Pixel] = []
+        steps = 200 if not kwargs.get('steps') else kwargs.get('steps')
+
+        # Creating boundary points
+        c_points.insert(0, c_points[0] / 1.1)
+        c_points.append(c_points[-1] * 1.1)
+
+        px_list: list[Pixel] = []
+        
+        for i in range(1, len(c_points) - 2):
+            steps = (int(c_points[i].distance(c_points[i + 1])) * 10
+                     if not kwargs.get('steps') else kwargs.get('steps'))            
+            x_coords = np.linspace(c_points[i].x, c_points[i + 1].x,
+                                   steps)
+            
+            mk = deriv(pk0=c_points[i - 1], pk1=c_points[i],
+                       pk2=c_points[i + 1], xk0=c_points[i - 1].x,
+                       xk1=c_points[i].x, xk2=c_points[i + 1].x)
+            mk1 = deriv(pk0=c_points[i], pk1=c_points[i + 1],
+                        pk2=c_points[i + 2], xk0=c_points[i].x,
+                        xk1=c_points[i + 1].x, xk2=c_points[i + 2].x)
+            px_list.extend(
+                [
+                    Pixel(p(t(x, c_points[i].x, c_points[i + 1].x),
+                            c_points[i], c_points[i + 1],
+                            mk, mk1, c_points[i].x, c_points[i + 1].x),
+                            color, alpha)
+                    for x in x_coords
+                ]
+            )
+
+        return px_list
+

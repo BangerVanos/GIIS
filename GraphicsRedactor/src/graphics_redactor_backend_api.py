@@ -59,7 +59,8 @@ class ShapeDrawer:
 
             ToolsEnum.parametric_line: {
                 ParametricLinesAlgorithmsEnum.bezier: ParametricLines.bezier,
-                ParametricLinesAlgorithmsEnum.bspline: ParametricLines.b_spline
+                ParametricLinesAlgorithmsEnum.bspline: ParametricLines.b_spline,
+                ParametricLinesAlgorithmsEnum.hermite: ParametricLines.hermite
             }
         }
 

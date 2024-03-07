@@ -148,13 +148,7 @@ class GraphicsRedactorView:
             if st.session_state.get('tool_selector') == ToolsEnum.parametric_line:
                 st.number_input(label='Choose number of control points',
                                 min_value=4,
-                                key='cpoints_amount_selector')
-                if (st.session_state.get('cpoints_amount_selector') and
-                    algorithm_selector == ParametricLinesAlgorithmsEnum.bspline):
-                    st.number_input(label='B-Spline order',
-                                    min_value=2,
-                                    max_value=st.session_state.get('cpoints_amount_selector'),
-                                    key='bspline_order')
+                                key='cpoints_amount_selector')                
     
     def _tool_algorithm_format_func(self, option) -> str:
         format_dict = {
@@ -168,9 +162,9 @@ class GraphicsRedactorView:
             SecondOrderLineAlgorithmsEnum.hyperbola: 'Hyperbola',
             SecondOrderLineAlgorithmsEnum.parabola: 'Parabola',
 
-            ParametricLinesAlgorithmsEnum.hermit: 'Hermite shape',
+            ParametricLinesAlgorithmsEnum.hermite: 'Hermite shape',
             ParametricLinesAlgorithmsEnum.bezier: 'Bezier\'s curve',
-            ParametricLinesAlgorithmsEnum.bspline: 'B-Spline',
+            ParametricLinesAlgorithmsEnum.bspline: 'Cubic B-Spline',
             
         }
         return format_dict.get(option, 'Kiya!')
@@ -207,6 +201,7 @@ class GraphicsRedactorView:
             enough_point_to_draw[ToolsEnum.parametric_line] = {
                 ParametricLinesAlgorithmsEnum.bezier: parametric_curve_cpoints,
                 ParametricLinesAlgorithmsEnum.bspline: parametric_curve_cpoints,
+                ParametricLinesAlgorithmsEnum.hermite: parametric_curve_cpoints
             }
         
         tool = st.session_state.get('tool_selector')
@@ -219,10 +214,7 @@ class GraphicsRedactorView:
             st.rerun()
 
     def _send_right_data_to_drawer(self, tool, algorithm, points):
-        kwargs = {}
-        if tool == ToolsEnum.parametric_line:
-            if algorithm == ParametricLinesAlgorithmsEnum.bspline:
-                kwargs['order'] = st.session_state.get('bspline_order')
+        kwargs = {}        
         st.session_state['drawer'].draw_shape(
             tool=tool,
             algorithm=algorithm,

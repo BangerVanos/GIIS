@@ -48,14 +48,14 @@ class SecondOrderLineAlgorithmsEnum(StrEnum):
 
 
 class ParametricLinesAlgorithmsEnum(StrEnum):
-    hermit: str = 'hermit'
+    hermite: str = 'hermit'
     bezier: str = 'bezier'
     bspline: str = 'bspline'
 
     @classmethod
     def to_list(cls) -> list:
         return [
-            cls.hermit,
+            cls.hermite,
             cls.bezier,
             cls.bspline
         ]
