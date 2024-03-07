@@ -149,6 +149,12 @@ class GraphicsRedactorView:
                 st.number_input(label='Choose number of control points',
                                 min_value=4,
                                 key='cpoints_amount_selector')
+                if (st.session_state.get('cpoints_amount_selector') and
+                    algorithm_selector == ParametricLinesAlgorithmsEnum.bspline):
+                    st.number_input(label='B-Spline order',
+                                    min_value=2,
+                                    max_value=st.session_state.get('cpoints_amount_selector'),
+                                    key='bspline_order')
     
     def _tool_algorithm_format_func(self, option) -> str:
         format_dict = {
@@ -199,7 +205,8 @@ class GraphicsRedactorView:
         if st.session_state.get('cpoints_amount_selector'):
             parametric_curve_cpoints = st.session_state.get('cpoints_amount_selector')
             enough_point_to_draw[ToolsEnum.parametric_line] = {
-                ParametricLinesAlgorithmsEnum.bezier: parametric_curve_cpoints
+                ParametricLinesAlgorithmsEnum.bezier: parametric_curve_cpoints,
+                ParametricLinesAlgorithmsEnum.bspline: parametric_curve_cpoints,
             }
         
         tool = st.session_state.get('tool_selector')
@@ -207,15 +214,23 @@ class GraphicsRedactorView:
         if (len(st.session_state.get('points_list')) ==
             enough_point_to_draw[tool][algorithm]):
             points = st.session_state['points_list']            
-            st.session_state['drawer'].draw_shape(
-                tool=tool,
-                algorithm=algorithm,
-                points=points,
-                color=st.session_state.get('color_selector', '#000000'),
-                alpha=255
-            )
+            self._send_right_data_to_drawer(tool, algorithm, points)
             st.session_state['points_list'] = None                        
-            st.rerun()                 
+            st.rerun()
+
+    def _send_right_data_to_drawer(self, tool, algorithm, points):
+        kwargs = {}
+        if tool == ToolsEnum.parametric_line:
+            if algorithm == ParametricLinesAlgorithmsEnum.bspline:
+                kwargs['order'] = st.session_state.get('bspline_order')
+        st.session_state['drawer'].draw_shape(
+            tool=tool,
+            algorithm=algorithm,
+            points=points,
+            color=st.session_state.get('color_selector', '#000000'),
+            alpha=255,
+            **kwargs
+        )
 
 
 view = GraphicsRedactorView()
