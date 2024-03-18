@@ -40,26 +40,57 @@ class ParametricLines:
         ]
         return px_list
 
+    # @classmethod
+    # def b_spline(cls, c_points: list[Point], color: str = '#000000',
+    #              alpha: int = 255, **kwargs) -> list[Pixel]:                
+        
+    #     segments = [c_points[i:i+2] for i in range(len(c_points) - 1)]
+    #     cp_x_arr = np.array([point.x for point in c_points])
+    #     srt_cp_x_arr_indx = np.argsort(cp_x_arr)
+    #     cp_y_arr = np.array([point.y for point in c_points])
+    #     tck = splrep(cp_x_arr[srt_cp_x_arr_indx],
+    #                  cp_y_arr[srt_cp_x_arr_indx], s=0, k=3)
+    #     px_list: list[Pixel] = []        
+    #     b_spline = BSpline(*tck)
+    #     for segment in segments:
+    #         steps = int(segment[0].distance(segment[-1]))
+    #         x_coords = list(np.linspace(segment[0].x, segment[-1].x, steps))            
+    #         px_list.extend([
+    #             Pixel(Point(x, y), color, alpha)
+    #             for x, y in zip(x_coords, b_spline(x_coords))
+    #         ])      
+            
+    #     return px_list
+
     @classmethod
     def b_spline(cls, c_points: list[Point], color: str = '#000000',
-                 alpha: int = 255, **kwargs) -> list[Pixel]:                
+                 alpha: int = 255, **kwargs) -> list[Pixel]:
+        points_amount = len(c_points)
+        c_points.insert(0, c_points[0])
+        c_points.append(c_points[-1])
+
+        seg_steps = 100 if not kwargs.get('steps') else kwargs['steps']
+
+        px_list: list[Pixel] = []
+
+        def find_segment(i):
+            par_list = np.linspace(0, 1, seg_steps)
+            for t in par_list:
+                point = ((1/6) * np.array([t**3, t**2, t, 1]) @ np.array([[-1, 3, -3, 1],
+                                                                         [3, -6, 3, 0],
+                                                                         [-3, 0, 3, 0],
+                                                                         [1, 4, 1, 0]])
+                        @ np.array([[c_points[i - 1].x, c_points[i - 1].y],
+                                    [c_points[i].x, c_points[i].y],
+                                    [c_points[i + 1].x, c_points[i + 1].y],
+                                    [c_points[i + 2].x, c_points[i + 2].y]]))
+                px_list.append(
+                    Pixel(Point(point[0], point[1]), color, alpha)
+                )
         
-        segments = [c_points[i:i+2] for i in range(len(c_points) - 1)]
-        cp_x_arr = np.array([point.x for point in c_points])
-        srt_cp_x_arr_indx = np.argsort(cp_x_arr)
-        cp_y_arr = np.array([point.y for point in c_points])
-        tck = splrep(cp_x_arr[srt_cp_x_arr_indx],
-                     cp_y_arr[srt_cp_x_arr_indx], s=0, k=3)
-        px_list: list[Pixel] = []        
-        b_spline = BSpline(*tck)
-        for segment in segments:
-            steps = int(segment[0].distance(segment[-1]))
-            x_coords = list(np.linspace(segment[0].x, segment[-1].x, steps))            
-            px_list.extend([
-                Pixel(Point(x, y), color, alpha)
-                for x, y in zip(x_coords, b_spline(x_coords))
-            ])      
-            
+        for i in range(1, points_amount):
+            find_segment(i)
+        
         return px_list
 
     @classmethod
