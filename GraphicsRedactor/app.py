@@ -102,7 +102,7 @@ class GraphicsRedactorView:
         width = st.session_state.get('image_width_input')
         height = st.session_state.get('image_height_input')
         st.session_state['canvas_image'] = img.new('RGB', (width, height), color='white')
-        st.session_state['canvas_figures'] = dict()
+        st.session_state['canvas_shapes'] = dict()
         st.session_state['drawer'] = ShapeDrawer(st.session_state['canvas_image'])
         st.session_state['points_list'] = None
         self._switch_to_canvas()
@@ -111,7 +111,7 @@ class GraphicsRedactorView:
         size = st.session_state['canvas_image'].size
         st.session_state['points_list'] = None
         st.session_state['canvas_image'] = img.new('RGB', size, color='white')
-        st.session_state['canvas_figures'] = dict()
+        st.session_state['canvas_shapes'] = dict()
         st.session_state['drawer'].set_canvas(st.session_state['canvas_image'])    
 
     def _switch_to_canvas(self) -> None:
@@ -171,7 +171,7 @@ class GraphicsRedactorView:
 
     def _handle_canvas_click(self, coords) -> None:
         if st.session_state.get('points_list') is None:
-            st.session_state['points_list'] = []
+            st.session_state['points_list'] = []            
             return                
         st.session_state['points_list'].append(Point(
             coords['x'], coords['y']
@@ -223,6 +223,18 @@ class GraphicsRedactorView:
             alpha=255,
             **kwargs
         )
+    
+    def _add_shape_to_shapes_dict(self, tool, algorithm, points):
+        if st.session_state.get('canvas_shapes') is None:
+            st.session_state['canvas_shapes'] = dict()
+        shapes = list(st.session_state['canvas_shapes'].keys())
+        common_shapes = [shape for shape in shapes
+                         if shape.startswith(f'{tool}_')]
+        last_common_shape_id = (0 if not common_shapes 
+                                else max(list(map(lambda item: int(item.replace(f'{tool}_', '')),
+                                                  common_shapes))))
+        new_shape_id = last_common_shape_id + 1
+        
 
 
 view = GraphicsRedactorView()
