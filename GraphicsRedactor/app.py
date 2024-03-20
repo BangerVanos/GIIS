@@ -170,14 +170,16 @@ class GraphicsRedactorView:
         if algorithm == TransformingAlgorithmsEnum.move:
             st.radio(label='Axis',
                      options=['x', 'y'],
-                     key='move_axis')
+                     key='move_axis',
+                     horizontal=True)
             st.number_input(label='Pixels amount',
                             value=0,
                             key='move_amount')
         elif algorithm == TransformingAlgorithmsEnum.reflect:
             st.radio(label='Axis',
                      options=['x', 'y'],
-                     key='reflect_axis')
+                     key='reflect_axis',
+                     horizontal=True)
         elif algorithm == TransformingAlgorithmsEnum.rotate:
             st.number_input(label='Degree',
                             value=0,
