@@ -4,8 +4,10 @@ from PIL import Image as img
 from src.app_enums import AppStatesEnum, ToolsEnum
 from src.app_enums import (FirstOrderLineAlgorithmsEnum,
                            SecondOrderLineAlgorithmsEnum,
-                           ParametricLinesAlgorithmsEnum)
+                           ParametricLinesAlgorithmsEnum,
+                           TransformingAlgorithmsEnum)
 from src.graphics_redactor_backend_api import ShapeDrawer
+from src.transforming import ImageTransformer
 from src.additional_math import Point
 
 
@@ -79,8 +81,11 @@ class GraphicsRedactorView:
                     st.session_state['canvas_image'],
                     key='canvas_click_coords'    
                 )
-                if click_coords:
-                    self._handle_canvas_click(click_coords)                    
+
+                # Only drawing tools could accept canvas clicks
+                if click_coords and tool_select != ToolsEnum.transforming:
+                    self._handle_canvas_click(click_coords)
+                                    
                 new_img_col, save_img_col, debug_col, blank_col = st.columns([2, 2, 2, 10], gap='small')
                 with new_img_col:
                     st.button(label='Clear canvas', use_container_width=True,
@@ -104,6 +109,8 @@ class GraphicsRedactorView:
         st.session_state['canvas_image'] = img.new('RGB', (width, height), color='white')
         st.session_state['canvas_shapes'] = dict()
         st.session_state['drawer'] = ShapeDrawer(st.session_state['canvas_image'])
+        st.session_state['transformer'] = ImageTransformer(st.session_state['canvas_image'],
+                                                           self)
         st.session_state['points_list'] = None
         self._switch_to_canvas()
 
@@ -112,7 +119,13 @@ class GraphicsRedactorView:
         st.session_state['points_list'] = None
         st.session_state['canvas_image'] = img.new('RGB', size, color='white')
         st.session_state['canvas_shapes'] = dict()
-        st.session_state['drawer'].set_canvas(st.session_state['canvas_image'])    
+        st.session_state['drawer'].set_canvas(st.session_state['canvas_image'])  
+        st.session_state['transformer'].set_canvas(st.session_state['canvas_image'])
+
+    def set_canvas(self, canvas: img.Image) -> None: 
+        st.session_state['canvas_image'] = canvas
+        st.session_state['drawer'].set_canvas(st.session_state['canvas_image'])  
+        st.session_state['transformer'].set_canvas(st.session_state['canvas_image'])
 
     def _switch_to_canvas(self) -> None:
         st.session_state['app_state'] = AppStatesEnum.canvas_render_state
@@ -134,7 +147,7 @@ class GraphicsRedactorView:
             ToolsEnum.first_order_line: FirstOrderLineAlgorithmsEnum.to_list(),
             ToolsEnum.second_order_line: SecondOrderLineAlgorithmsEnum.to_list(),
             ToolsEnum.parametric_line: ParametricLinesAlgorithmsEnum.to_list(),
-            ToolsEnum.transforming: ['Kiya!']
+            ToolsEnum.transforming: TransformingAlgorithmsEnum.to_list()
         }
         with tool_col_placeholder:
             algorithm_selector = st.selectbox(
@@ -148,7 +161,40 @@ class GraphicsRedactorView:
             if st.session_state.get('tool_selector') == ToolsEnum.parametric_line:
                 st.number_input(label='Choose number of control points',
                                 min_value=4,
-                                key='cpoints_amount_selector')                
+                                key='cpoints_amount_selector')
+            elif (st.session_state.get('tool_selector') == ToolsEnum.transforming
+                  and algorithm_selector):
+                self._render_transforming_parameters(algorithm_selector)
+
+    def _render_transforming_parameters(self, algorithm):
+        if algorithm == TransformingAlgorithmsEnum.move:
+            st.radio(label='Axis',
+                     options=['x', 'y'],
+                     key='move_axis')
+            st.number_input(label='Pixels amount',
+                            value=0,
+                            key='move_amount')
+        elif algorithm == TransformingAlgorithmsEnum.reflect:
+            st.radio(label='Axis',
+                     options=['x', 'y'],
+                     key='reflect_axis')
+        elif algorithm == TransformingAlgorithmsEnum.rotate:
+            st.number_input(label='Degree',
+                            value=0,
+                            key='rotate_degree')
+        elif algorithm == TransformingAlgorithmsEnum.scale:
+            st.number_input(label='X Scale',
+                            min_value=0.0,
+                            value=1.0,
+                            key='scale_x',
+                            step=0.1)
+            st.number_input(label='Y Scale',
+                            min_value=0.0,
+                            value=1.0,
+                            key='scale_y',
+                            step=0.1)
+        st.button(label='Apply transform',
+                  on_click=lambda: self._handle_transforming(algorithm))             
     
     def _tool_algorithm_format_func(self, option) -> str:
         format_dict = {
@@ -165,6 +211,11 @@ class GraphicsRedactorView:
             ParametricLinesAlgorithmsEnum.hermite: 'Hermite shape',
             ParametricLinesAlgorithmsEnum.bezier: 'Bezier\'s curve',
             ParametricLinesAlgorithmsEnum.bspline: 'Cubic B-Spline',
+
+            TransformingAlgorithmsEnum.move: 'Move',
+            TransformingAlgorithmsEnum.scale: 'Scale',
+            TransformingAlgorithmsEnum.reflect: 'Reflection',
+            TransformingAlgorithmsEnum.rotate: 'Rotation'
             
         }
         return format_dict.get(option, 'Kiya!')
@@ -234,8 +285,27 @@ class GraphicsRedactorView:
                                 else max(list(map(lambda item: int(item.replace(f'{tool}_', '')),
                                                   common_shapes))))
         new_shape_id = last_common_shape_id + 1
+    
+    def _handle_transforming(self, algorithm):
+        if algorithm == TransformingAlgorithmsEnum.move:
+            st.session_state.get('transformer').move(
+                st.session_state.get('move_axis'),
+                st.session_state.get('move_amount')
+            )
+        elif algorithm == TransformingAlgorithmsEnum.reflect:
+            st.session_state.get('transformer').reflect(
+                st.session_state.get('reflect_axis')                
+            )
+        elif algorithm == TransformingAlgorithmsEnum.rotate:
+            st.session_state.get('transformer').rotate(
+                st.session_state.get('rotate_degree')
+            )
+        elif algorithm == TransformingAlgorithmsEnum.scale:
+            st.session_state.get('transformer').scale(
+                st.session_state.get('scale_x'),
+                st.session_state.get('scale_y')
+            )
         
-
 
 view = GraphicsRedactorView()
 view.run()

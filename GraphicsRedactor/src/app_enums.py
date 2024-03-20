@@ -59,3 +59,19 @@ class ParametricLinesAlgorithmsEnum(StrEnum):
             cls.bezier,
             cls.bspline
         ]
+
+
+class TransformingAlgorithmsEnum(StrEnum):
+    move: str = 'move'
+    reflect: str = 'reflect'
+    rotate: str = 'rotate'
+    scale: str = 'scale'
+    
+    @classmethod
+    def to_list(cls) -> list:
+        return [
+            cls.move,
+            cls.reflect,
+            cls.rotate,
+            cls.scale
+        ]
