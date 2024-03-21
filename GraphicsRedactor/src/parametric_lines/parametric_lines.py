@@ -11,6 +11,11 @@ class ParametricLines:
     @classmethod
     def bezier(cls, c_points: list[Point], color: str = '#000000',
                alpha: int = 255, **kwargs) -> None:
+        
+        # Check whether curve is enclosed
+        if kwargs.get('enclosed'):
+            c_points.append(c_points[0])
+
         CPOINTSAMOUNT = len(c_points)
         n = CPOINTSAMOUNT - 1
         i = 0
@@ -65,6 +70,11 @@ class ParametricLines:
     @classmethod
     def b_spline(cls, c_points: list[Point], color: str = '#000000',
                  alpha: int = 255, **kwargs) -> list[Pixel]:
+        
+        # Check whether curve is enclosed
+        if kwargs.get('enclosed'):
+            c_points.append(c_points[0])
+
         points_amount = len(c_points)
         c_points.insert(0, c_points[0])
         c_points.append(c_points[-1])
@@ -119,9 +129,13 @@ class ParametricLines:
         px_list: list[Pixel] = []
         steps = 200 if not kwargs.get('steps') else kwargs.get('steps')
 
+        # Check whether curve is enclosed
+        if kwargs.get('enclosed'):
+            c_points.append(c_points[0])
+
         # Creating boundary points
-        c_points.insert(0, c_points[0] / 1.1)
-        c_points.append(c_points[-1] * 1.1)
+        c_points.insert(0, c_points[0])
+        c_points.append(c_points[-1])
 
         px_list: list[Pixel] = []
         

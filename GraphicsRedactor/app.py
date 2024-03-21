@@ -162,6 +162,8 @@ class GraphicsRedactorView:
                 st.number_input(label='Choose number of control points',
                                 min_value=4,
                                 key='cpoints_amount_selector')
+                st.checkbox(label='Enclosed?',
+                            key='parametric_enclosed')
             elif (st.session_state.get('tool_selector') == ToolsEnum.transforming
                   and algorithm_selector):
                 self._render_transforming_parameters(algorithm_selector)
@@ -267,7 +269,9 @@ class GraphicsRedactorView:
             st.rerun()
 
     def _send_right_data_to_drawer(self, tool, algorithm, points):
-        kwargs = {}        
+        kwargs = {}
+        if tool == ToolsEnum.parametric_line:
+            kwargs['enclosed'] = st.session_state.get('parametric_enclosed')
         st.session_state['drawer'].draw_shape(
             tool=tool,
             algorithm=algorithm,
