@@ -555,7 +555,7 @@ class PolygonFill:
                 ):
                     x1 += 1
                 x = x1            
-            if len(stack) > 100:
-                break            
+            # if len(stack) > 100:
+            #     break            
             
         return px_list
