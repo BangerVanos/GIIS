@@ -5,7 +5,9 @@ from src.app_enums import AppStatesEnum, ToolsEnum
 from src.app_enums import (FirstOrderLineAlgorithmsEnum,
                            SecondOrderLineAlgorithmsEnum,
                            ParametricLinesAlgorithmsEnum,
-                           TransformingAlgorithmsEnum)
+                           TransformingAlgorithmsEnum,
+                           PolygonAlgorithmsEnum,
+                           PolygonFillAlgorithmsEnum)
 from src.graphics_redactor_backend_api import ShapeDrawer
 from src.transforming import ImageTransformer
 from src.additional_math import Point
@@ -61,16 +63,12 @@ class GraphicsRedactorView:
                 color_select = st.color_picker(
                     label='Select pixel color',
                     key='color_select',
+                    value='#000000',
                     help='Select color of your shapes'
                 )                
                 tool_select = st.radio(
                     label='Select tool',
-                    options=[
-                        ToolsEnum.first_order_line,
-                        ToolsEnum.second_order_line,
-                        ToolsEnum.parametric_line,
-                        ToolsEnum.transforming
-                    ],
+                    options=ToolsEnum.to_list(),
                     format_func=self._tool_format_func,
                     key='tool_selector'
                 )
@@ -138,6 +136,7 @@ class GraphicsRedactorView:
             ToolsEnum.first_order_line: 'First order line ―',
             ToolsEnum.second_order_line: 'Second order line ⌒',
             ToolsEnum.parametric_line: 'Parametric line ⟡',
+            ToolsEnum.polygon: 'Polygon tool 🛑',
             ToolsEnum.transforming: 'Transforming tool ⌗'
         }
         return format_dict[option]
@@ -147,7 +146,8 @@ class GraphicsRedactorView:
             ToolsEnum.first_order_line: FirstOrderLineAlgorithmsEnum.to_list(),
             ToolsEnum.second_order_line: SecondOrderLineAlgorithmsEnum.to_list(),
             ToolsEnum.parametric_line: ParametricLinesAlgorithmsEnum.to_list(),
-            ToolsEnum.transforming: TransformingAlgorithmsEnum.to_list()
+            ToolsEnum.transforming: TransformingAlgorithmsEnum.to_list(),
+            ToolsEnum.polygon: PolygonAlgorithmsEnum.to_list()
         }
         with tool_col_placeholder:
             algorithm_selector = st.selectbox(
@@ -159,14 +159,19 @@ class GraphicsRedactorView:
             )
 
             if st.session_state.get('tool_selector') == ToolsEnum.parametric_line:
-                st.number_input(label='Choose number of control points',
-                                min_value=4,
-                                key='cpoints_amount_selector')
-                st.checkbox(label='Enclosed?',
-                            key='parametric_enclosed')
+                self._render_parametric_line_parameters()
             elif (st.session_state.get('tool_selector') == ToolsEnum.transforming
                   and algorithm_selector):
                 self._render_transforming_parameters(algorithm_selector)
+            elif st.session_state.get('tool_selector') == ToolsEnum.polygon:
+                self._render_polygon_parameters()
+    
+    def _render_parametric_line_parameters(self) -> None:
+        st.number_input(label='Choose number of control points',
+                                min_value=4,
+                                key='cpoints_amount_selector')
+        st.checkbox(label='Enclosed?',
+                    key='parametric_enclosed')
 
     def _render_transforming_parameters(self, algorithm):
         if algorithm == TransformingAlgorithmsEnum.move:
@@ -198,7 +203,30 @@ class GraphicsRedactorView:
                             key='scale_y',
                             step=0.1)
         st.button(label='Apply transform',
-                  on_click=lambda: self._handle_transforming(algorithm))             
+                  on_click=lambda: self._handle_transforming(algorithm))
+
+    def _render_polygon_parameters(self) -> None:
+        st.number_input(label='Choose number of control points',
+                                min_value=3,
+                                key='cpoints_amount_selector')
+        get_normals = st.checkbox(label='Draw normals?',
+                                  key='get_normals')
+        if get_normals:
+            st.color_picker(label='Normals color',
+                            value='#0000FF',
+                            key='normals_color')
+
+        fill = st.checkbox(label='Fill polygon?',
+                           key='fill')
+
+        if fill:
+            st.color_picker(label='Fill color',
+                            value='#000000',
+                            key='fill_color')
+            st.selectbox(label='Select Fill algorithm',
+                         key='fill_algorithm',
+                         options=PolygonFillAlgorithmsEnum.to_list(),
+                         format_func=self._tool_algorithm_format_func)          
     
     def _tool_algorithm_format_func(self, option) -> str:
         format_dict = {
@@ -219,7 +247,16 @@ class GraphicsRedactorView:
             TransformingAlgorithmsEnum.move: 'Move',
             TransformingAlgorithmsEnum.scale: 'Scale',
             TransformingAlgorithmsEnum.reflect: 'Reflection',
-            TransformingAlgorithmsEnum.rotate: 'Rotation'
+            TransformingAlgorithmsEnum.rotate: 'Rotation',
+
+            PolygonAlgorithmsEnum.simple: 'Simple custom polygon',
+            PolygonAlgorithmsEnum.graham: 'Graham convex hull',
+            PolygonAlgorithmsEnum.jarvis: 'Jarvis convex hull',
+
+            PolygonFillAlgorithmsEnum.scan_line_simple: 'Scan Line (no active edges)',
+            PolygonFillAlgorithmsEnum.scan_line: 'Scan Line (with active edges)',
+            PolygonFillAlgorithmsEnum.simple_floodfill: 'Simple Floodfill',
+            PolygonFillAlgorithmsEnum.scan_floodfill: 'ScanLine Floodfill'
             
         }
         return format_dict.get(option, 'Kiya!')
@@ -234,6 +271,10 @@ class GraphicsRedactorView:
         self._handle_shape_drawing()                        
     
     def _handle_shape_drawing(self) -> None:
+
+        tool = st.session_state.get('tool_selector')
+        algorithm = st.session_state.get('tool_algorithm')
+
         # Handling only first and second order lines        
         enough_point_to_draw = {
             ToolsEnum.first_order_line: {
@@ -250,17 +291,26 @@ class GraphicsRedactorView:
                 SecondOrderLineAlgorithmsEnum.parabola: 2
             } 
         }
-        # If parametric line tool is chosen, this block will work
+        # If parametric line or polygon tool is chosen, this block will work
         if st.session_state.get('cpoints_amount_selector'):
-            parametric_curve_cpoints = st.session_state.get('cpoints_amount_selector')
-            enough_point_to_draw[ToolsEnum.parametric_line] = {
-                ParametricLinesAlgorithmsEnum.bezier: parametric_curve_cpoints,
-                ParametricLinesAlgorithmsEnum.bspline: parametric_curve_cpoints,
-                ParametricLinesAlgorithmsEnum.hermite: parametric_curve_cpoints
-            }
+
+            c_points_amount = st.session_state.get('cpoints_amount_selector')
+
+            if tool == ToolsEnum.parametric_line:            
+                enough_point_to_draw[ToolsEnum.parametric_line] = {
+                    ParametricLinesAlgorithmsEnum.bezier: c_points_amount,
+                    ParametricLinesAlgorithmsEnum.bspline: c_points_amount,
+                    ParametricLinesAlgorithmsEnum.hermite: c_points_amount
+                }
+            
+            elif tool == ToolsEnum.polygon:
+                enough_point_to_draw[ToolsEnum.polygon] = {
+                    PolygonAlgorithmsEnum.simple: c_points_amount,
+                    PolygonAlgorithmsEnum.graham: c_points_amount,
+                    PolygonAlgorithmsEnum.jarvis: c_points_amount
+                }
         
-        tool = st.session_state.get('tool_selector')
-        algorithm = st.session_state.get('tool_algorithm')        
+                
         if (len(st.session_state.get('points_list')) ==
             enough_point_to_draw[tool][algorithm]):
             points = st.session_state['points_list']            
@@ -272,6 +322,14 @@ class GraphicsRedactorView:
         kwargs = {}
         if tool == ToolsEnum.parametric_line:
             kwargs['enclosed'] = st.session_state.get('parametric_enclosed')
+        elif tool == ToolsEnum.polygon:
+            kwargs['get_normals'] = st.session_state.get('get_normals')
+            kwargs['normals_color'] = st.session_state.get('normals_color', '#0000FF')
+
+            kwargs['fill'] = st.session_state.get('fill')
+            kwargs['fill_color'] = st.session_state.get('fill_color', '#000000')
+            kwargs['fill_algorithm'] = st.session_state.get('fill_algorithm')
+        
         st.session_state['drawer'].draw_shape(
             tool=tool,
             algorithm=algorithm,

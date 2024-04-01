@@ -51,6 +51,7 @@ class Point:
                             f'Other object type is {type(other)}')
         return sqrt(abs(self.x - other.x)**2 + abs(self.y - other.y)**2)
 
+
 @dataclass
 class Pixel:
     point: Point

@@ -12,7 +12,18 @@ class ToolsEnum(StrEnum):
     first_order_line: str = 'fst_ord_line'
     second_order_line: str = 'scnd_ord_line'
     parametric_line: str = 'param_line'
+    polygon: str = 'polygon'
     transforming: str = 'transforming'
+
+    @classmethod
+    def to_list(cls) -> list:
+        return [
+            cls.first_order_line,
+            cls.second_order_line,
+            cls.parametric_line,
+            cls.polygon,
+            cls.transforming
+        ]
 
 
 class FirstOrderLineAlgorithmsEnum(StrEnum):
@@ -74,4 +85,34 @@ class TransformingAlgorithmsEnum(StrEnum):
             cls.reflect,
             cls.rotate,
             cls.scale
+        ]
+
+
+class PolygonAlgorithmsEnum(StrEnum):
+    simple: str = 'simple'
+    graham: str = 'graham'
+    jarvis: str = 'jarvis'
+
+    @classmethod
+    def to_list(cls) -> list:
+        return [
+            cls.simple,
+            cls.graham,
+            cls.jarvis
+        ]
+
+
+class PolygonFillAlgorithmsEnum(StrEnum):
+    scan_line_simple: str = 'scan_line_simple'
+    scan_line: str = 'scan_line'
+    simple_floodfill: str = 'floodfill_simple'
+    scan_floodfill: str = 'floodfill_scan'
+
+    @classmethod
+    def to_list(cls) -> list:
+        return [
+            cls.scan_line_simple,
+            cls.scan_line,
+            cls.simple_floodfill,
+            cls.scan_floodfill
         ]

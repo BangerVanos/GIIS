@@ -10,7 +10,7 @@ class ParametricLines:
 
     @classmethod
     def bezier(cls, c_points: list[Point], color: str = '#000000',
-               alpha: int = 255, **kwargs) -> None:
+               alpha: int = 255, **kwargs) -> list[Pixel]:
         
         # Check whether curve is enclosed
         if kwargs.get('enclosed'):
