@@ -7,7 +7,8 @@ from src.app_enums import (FirstOrderLineAlgorithmsEnum,
                            ParametricLinesAlgorithmsEnum,
                            TransformingAlgorithmsEnum,
                            PolygonAlgorithmsEnum,
-                           PolygonFillAlgorithmsEnum)
+                           PolygonFillAlgorithmsEnum,
+                           DelanayVoronoiAlgorithmsEnum)
 from src.graphics_redactor_backend_api import ShapeDrawer
 from src.transforming import ImageTransformer
 from src.additional_math import Point
@@ -137,7 +138,8 @@ class GraphicsRedactorView:
             ToolsEnum.second_order_line: 'Second order line ⌒',
             ToolsEnum.parametric_line: 'Parametric line ⟡',
             ToolsEnum.polygon: 'Polygon tool 🛑',
-            ToolsEnum.transforming: 'Transforming tool ⌗'
+            ToolsEnum.transforming: 'Transforming tool ⌗',
+            ToolsEnum.delanay_voronoi: 'Delanay & Voronoi'
         }
         return format_dict[option]
     
@@ -147,7 +149,8 @@ class GraphicsRedactorView:
             ToolsEnum.second_order_line: SecondOrderLineAlgorithmsEnum.to_list(),
             ToolsEnum.parametric_line: ParametricLinesAlgorithmsEnum.to_list(),
             ToolsEnum.transforming: TransformingAlgorithmsEnum.to_list(),
-            ToolsEnum.polygon: PolygonAlgorithmsEnum.to_list()
+            ToolsEnum.polygon: PolygonAlgorithmsEnum.to_list(),
+            ToolsEnum.delanay_voronoi: DelanayVoronoiAlgorithmsEnum.to_list()
         }
         with tool_col_placeholder:
             algorithm_selector = st.selectbox(
@@ -165,6 +168,8 @@ class GraphicsRedactorView:
                 self._render_transforming_parameters(algorithm_selector)
             elif st.session_state.get('tool_selector') == ToolsEnum.polygon:
                 self._render_polygon_parameters()
+            elif st.session_state.get('tool_selector') == ToolsEnum.delanay_voronoi:
+                self._render_delanay_voronoi_parameters()
     
     def _render_parametric_line_parameters(self) -> None:
         st.number_input(label='Choose number of control points',
@@ -226,7 +231,12 @@ class GraphicsRedactorView:
             st.selectbox(label='Select Fill algorithm',
                          key='fill_algorithm',
                          options=PolygonFillAlgorithmsEnum.to_list(),
-                         format_func=self._tool_algorithm_format_func)          
+                         format_func=self._tool_algorithm_format_func)
+
+    def _render_delanay_voronoi_parameters(self):
+        st.number_input(label='Choose number of control points',
+                        min_value=3,
+                        key='cpoints_amount_selector')      
     
     def _tool_algorithm_format_func(self, option) -> str:
         format_dict = {
@@ -256,7 +266,10 @@ class GraphicsRedactorView:
             PolygonFillAlgorithmsEnum.scan_line_simple: 'Scan Line (no active edges)',
             PolygonFillAlgorithmsEnum.scan_line: 'Scan Line (with active edges)',
             PolygonFillAlgorithmsEnum.simple_floodfill: 'Simple Floodfill',
-            PolygonFillAlgorithmsEnum.scan_floodfill: 'ScanLine Floodfill'
+            PolygonFillAlgorithmsEnum.scan_floodfill: 'ScanLine Floodfill',
+
+            DelanayVoronoiAlgorithmsEnum.delanay: 'Delanay Triangulation',
+            DelanayVoronoiAlgorithmsEnum.voronoi: 'Voronoi Diagram'
             
         }
         return format_dict.get(option, 'Kiya!')
@@ -291,7 +304,8 @@ class GraphicsRedactorView:
                 SecondOrderLineAlgorithmsEnum.parabola: 2
             } 
         }
-        # If parametric line or polygon tool is chosen, this block will work
+        # If parametric line or polygon or delanay-voronoi
+        # tool is chosen, this block will work
         if st.session_state.get('cpoints_amount_selector'):
 
             c_points_amount = st.session_state.get('cpoints_amount_selector')
@@ -308,6 +322,12 @@ class GraphicsRedactorView:
                     PolygonAlgorithmsEnum.simple: c_points_amount,
                     PolygonAlgorithmsEnum.graham: c_points_amount,
                     PolygonAlgorithmsEnum.jarvis: c_points_amount
+                }
+            
+            elif tool == ToolsEnum.delanay_voronoi:
+                enough_point_to_draw[ToolsEnum.delanay_voronoi] = {
+                    DelanayVoronoiAlgorithmsEnum.delanay: c_points_amount,
+                    DelanayVoronoiAlgorithmsEnum.voronoi: c_points_amount
                 }
         
                 

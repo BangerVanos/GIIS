@@ -5,11 +5,14 @@ from .first_order_lines.first_order_lines import FirstOrderLine
 from .second_order_lines.second_order_lines import SecondOrderLine
 from .parametric_lines.parametric_lines import ParametricLines
 from .polygons.polygons import Polygon
-from . app_enums import (ToolsEnum,
+from .delanay_voronoi.delanay_voronoi import (DelanayTriangulation,
+                                              VoronoiDiagram)
+from .app_enums import (ToolsEnum,
                          FirstOrderLineAlgorithmsEnum,
                          SecondOrderLineAlgorithmsEnum,
                          ParametricLinesAlgorithmsEnum,
-                         PolygonAlgorithmsEnum)
+                         PolygonAlgorithmsEnum,
+                         DelanayVoronoiAlgorithmsEnum)
 
 
 class Drawer:
@@ -69,6 +72,11 @@ class ShapeDrawer:
                 PolygonAlgorithmsEnum.simple: Polygon.simple_polygon,
                 PolygonAlgorithmsEnum.graham: Polygon.graham,
                 PolygonAlgorithmsEnum.jarvis: Polygon.jarvis
+            },
+
+            ToolsEnum.delanay_voronoi: {
+                DelanayVoronoiAlgorithmsEnum.delanay: DelanayTriangulation.triangulate,
+                DelanayVoronoiAlgorithmsEnum.voronoi: VoronoiDiagram.diagram
             }
         }
 
@@ -85,7 +93,10 @@ class ShapeDrawer:
                                        color, alpha, **kwargs)
         elif tool == ToolsEnum.polygon:
             self._draw_polygon(algorithm, points,
-                               color, alpha, **kwargs)       
+                               color, alpha, **kwargs)
+        elif tool == ToolsEnum.delanay_voronoi:
+            self._draw_delanay_voronoi(algorithm, points,
+                                       color, alpha, **kwargs)       
     
     def _draw_first_order_line(self, algorithm: str, start: Point, end: Point,
                                color: str = '#000000', alpha: int = 255) -> None:
@@ -117,6 +128,15 @@ class ShapeDrawer:
                       **kwargs) -> None:
         self._drawer.draw_pixels(
             self._shapes_algorithms[ToolsEnum.polygon][algorithm](
+                points, color, alpha, **kwargs
+            )
+        )
+    
+    def _draw_delanay_voronoi(self, algorithm: str, points: list[Point],
+                              color: str = '#000000', alpha: int = 255,
+                              **kwargs) -> None:
+        self._drawer.draw_pixels(
+            self._shapes_algorithms[ToolsEnum.delanay_voronoi][algorithm](
                 points, color, alpha, **kwargs
             )
         )

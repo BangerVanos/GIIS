@@ -14,6 +14,7 @@ class ToolsEnum(StrEnum):
     parametric_line: str = 'param_line'
     polygon: str = 'polygon'
     transforming: str = 'transforming'
+    delanay_voronoi: str = 'delanay-voronoi'
 
     @classmethod
     def to_list(cls) -> list:
@@ -22,7 +23,8 @@ class ToolsEnum(StrEnum):
             cls.second_order_line,
             cls.parametric_line,
             cls.polygon,
-            cls.transforming
+            cls.transforming,
+            cls.delanay_voronoi
         ]
 
 
@@ -115,4 +117,16 @@ class PolygonFillAlgorithmsEnum(StrEnum):
             cls.scan_line,
             cls.simple_floodfill,
             cls.scan_floodfill
+        ]
+    
+
+class DelanayVoronoiAlgorithmsEnum(StrEnum):
+    delanay: str = 'delanay'
+    voronoi: str = 'voronoi'
+
+    @classmethod
+    def to_list(cls) -> list:
+        return [
+            cls.delanay,
+            cls.voronoi
         ]
