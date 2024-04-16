@@ -1,6 +1,14 @@
 from enum import IntEnum
-from additional_math import Point, Pixel
+from src.additional_math import Point, Pixel
 from typing import Iterable
+from itertools import chain
+from src.polygons.polygons import Polygon
+from math import ceil
+from random import randint
+
+
+def rrgb() -> str:
+    return f'#{randint(0, 0xFFFFFF):06x}'
 
 
 class RegionCodes(IntEnum):
@@ -15,12 +23,30 @@ class Clipping2D:
 
     @classmethod
     def clipping(cls, c_points: list[Point], color: str = '#000000',
-                 alpha: int = 255) -> list[Pixel]:
+                 alpha: int = 255, **kwargs) -> list[Pixel]:
         b_points = (c_points.pop(-1), c_points.pop(-1))
         edges = ((c_points[i], c_points[(i+1)%len(c_points)])
                  for i in range(len(c_points)))
-        accepted_points = [a_edge := cls._line_clip(edge[0], edge[1])
-                           for edge in edges if a_edge is not None]
+        accepted_edges = [a_edge for edge in edges if (a_edge 
+                                                       := cls._line_clip(edge[0],
+                                                                         edge[1],
+                                                                         b_points))
+                          is not None]
+        accepted_points = list(chain.from_iterable(accepted_edges))
+
+        x_min, y_min, x_max, y_max = cls._find_boundary_four(b_points)
+
+        px_list: list[Pixel] = []
+
+        px_list.extend(
+            Polygon.simple_polygon([Point(x_min, y_min), Point(x_min, y_max),
+                                    Point(x_max, y_max), Point(x_max, y_min)],
+                                    '#0000FF', alpha)
+        )
+        px_list.extend(
+            Polygon.simple_polygon(accepted_points, color, alpha)
+        )
+        return px_list
     
     @classmethod
     def _find_boundary_four(cls, b_points: Iterable[Point]):
@@ -58,8 +84,7 @@ class Clipping2D:
         code2 = cls._pt_region_code(p2, b_points)
         accept = False
 
-        while True:
-
+        while True:            
             if code1 == 0 and code2 == 0:
                 accept = True
                 break
@@ -87,13 +112,13 @@ class Clipping2D:
                     x = x_min
                 
                 if code_out == code1:
-                    x1 = x
-                    y1 = y
+                    x1 = ceil(x)
+                    y1 = ceil(y)
                     code1 = cls._pt_region_code(Point(x1, y1), b_points)
                 else:
-                    x2 = x
-                    y2 = y
-                    code2 = cls._pt_region_code(Point(x2, y2), b_points)
+                    x2 = ceil(x)
+                    y2 = ceil(y)
+                    code2 = cls._pt_region_code(Point(x2, y2), b_points)                
         
         if accept:
             return (Point(x1, y1), Point(x2, y2))

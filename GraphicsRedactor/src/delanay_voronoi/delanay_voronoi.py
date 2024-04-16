@@ -3,6 +3,7 @@ from src.additional_math import Point, Pixel
 from scipy.spatial import Delaunay, Voronoi
 import numpy as np
 from random import randint
+from math import ceil
 
 
 def rrgb() -> str:
@@ -43,11 +44,14 @@ class VoronoiDiagram:
                 alpha: int = 255, **kwargs):
         raw_points = np.array([(p.x, p.y) for p in c_points])
         vor = Voronoi(raw_points)
+        print(vor.regions)
 
         px_list: list[Pixel] = []
-        regions = [[Point(p[0], p[1]) for p in raw_points[reg]]
+        vor_verts = vor.vertices        
+        regions = [[Point(ceil(p[0]), ceil(p[1])) for p in vor_verts[reg]]
                     for reg in vor.regions if len(reg) > 0]
-        for region in regions:
+        
+        for region in regions:            
             px_list.extend(
                 Polygon.simple_polygon(region, color, alpha,
                                        fill=True,

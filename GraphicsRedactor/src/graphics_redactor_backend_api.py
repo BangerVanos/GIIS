@@ -7,12 +7,14 @@ from .parametric_lines.parametric_lines import ParametricLines
 from .polygons.polygons import Polygon
 from .delanay_voronoi.delanay_voronoi import (DelanayTriangulation,
                                               VoronoiDiagram)
+from .clipping.clipping import Clipping2D
 from .app_enums import (ToolsEnum,
                          FirstOrderLineAlgorithmsEnum,
                          SecondOrderLineAlgorithmsEnum,
                          ParametricLinesAlgorithmsEnum,
                          PolygonAlgorithmsEnum,
-                         DelanayVoronoiAlgorithmsEnum)
+                         DelanayVoronoiAlgorithmsEnum,
+                         ClippingAlgorithmsEnum)
 
 
 class Drawer:
@@ -77,6 +79,10 @@ class ShapeDrawer:
             ToolsEnum.delanay_voronoi: {
                 DelanayVoronoiAlgorithmsEnum.delanay: DelanayTriangulation.triangulate,
                 DelanayVoronoiAlgorithmsEnum.voronoi: VoronoiDiagram.diagram
+            },
+
+            ToolsEnum.clipping: {
+                ClippingAlgorithmsEnum.cohen_sutherland: Clipping2D.clipping
             }
         }
 
@@ -96,7 +102,10 @@ class ShapeDrawer:
                                color, alpha, **kwargs)
         elif tool == ToolsEnum.delanay_voronoi:
             self._draw_delanay_voronoi(algorithm, points,
-                                       color, alpha, **kwargs)       
+                                       color, alpha, **kwargs)
+        elif tool == ToolsEnum.clipping:
+            self._draw_clipping(algorithm, points,
+                                color, alpha, **kwargs)       
     
     def _draw_first_order_line(self, algorithm: str, start: Point, end: Point,
                                color: str = '#000000', alpha: int = 255) -> None:
@@ -137,6 +146,15 @@ class ShapeDrawer:
                               **kwargs) -> None:
         self._drawer.draw_pixels(
             self._shapes_algorithms[ToolsEnum.delanay_voronoi][algorithm](
+                points, color, alpha, **kwargs
+            )
+        )
+    
+    def _draw_clipping(self, algorithm: str, points: list[Point],
+                       color: str = '#000000', alpha: int = 255,
+                       **kwargs) -> None:
+        self._drawer.draw_pixels(
+            self._shapes_algorithms[ToolsEnum.clipping][algorithm](
                 points, color, alpha, **kwargs
             )
         )

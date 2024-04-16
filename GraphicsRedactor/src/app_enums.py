@@ -15,6 +15,7 @@ class ToolsEnum(StrEnum):
     polygon: str = 'polygon'
     transforming: str = 'transforming'
     delanay_voronoi: str = 'delanay-voronoi'
+    clipping: str = 'clipping'
 
     @classmethod
     def to_list(cls) -> list:
@@ -24,7 +25,8 @@ class ToolsEnum(StrEnum):
             cls.parametric_line,
             cls.polygon,
             cls.transforming,
-            cls.delanay_voronoi
+            cls.delanay_voronoi,
+            cls.clipping
         ]
 
 
@@ -129,4 +131,14 @@ class DelanayVoronoiAlgorithmsEnum(StrEnum):
         return [
             cls.delanay,
             cls.voronoi
+        ]
+
+
+class ClippingAlgorithmsEnum(StrEnum):
+    cohen_sutherland: str = 'cohen-sutherland'
+
+    @classmethod
+    def to_list(cls) -> list:
+        return [
+            cls.cohen_sutherland
         ]

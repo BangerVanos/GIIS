@@ -409,12 +409,17 @@ class PolygonFill:
         y_s = [point.y for point in polygon_points]
         y_min = min(y_s)
         y_max = max(y_s)
-                
+        
+        def get_slope(p1: Point, p2: Point):
+            dx = p2.x - p1.x
+            dy = 0.00000001 if (y := (p2.y - p1.y)) == 0 else y
+            return dx / dy
+
         edges: list[tuple[Point, Point, dict]] = [(p1 := polygon_points[i], p2 := polygon_points[i + 1],
                                                   {'y_min': min(p1.y, p2.y),
                                                    'y_max': max(p1.y, p2.y),
                                                    'x': p1.x if p1.y < p2.y else p2.x,
-                                                   'in_slope': (p2.x - p1.x) / (p2.y - p1.y)})
+                                                   'in_slope': get_slope(p1, p2)})
                                                    for i in range(len(polygon_points) - 1)]
         edges.sort(key=lambda item: item[2]['y_min'])
         active_edges: list[tuple[Point, Point, dict]] = []                
