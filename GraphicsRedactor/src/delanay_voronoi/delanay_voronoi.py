@@ -43,13 +43,13 @@ class VoronoiDiagram:
     def diagram(cls, c_points: list[Point], color: str = '#000000',
                 alpha: int = 255, **kwargs):
         raw_points = np.array([(p.x, p.y) for p in c_points])
-        vor = Voronoi(raw_points)
-        print(vor.regions)
+        vor = Voronoi(raw_points)        
 
         px_list: list[Pixel] = []
         vor_verts = vor.vertices        
-        regions = [[Point(ceil(p[0]), ceil(p[1])) for p in vor_verts[reg]]
-                    for reg in vor.regions if len(reg) > 0]
+        regions = [[Point(ceil(p[0]), ceil(p[1]))
+                    for p in vor_verts[np.setdiff1d(reg, [-1])]]
+                    for reg in vor.regions if len(reg) > 3]
         
         for region in regions:            
             px_list.extend(
