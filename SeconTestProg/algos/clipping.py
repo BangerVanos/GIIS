@@ -105,7 +105,7 @@ class Clipping:
                 print('Отрезок параллелен ребру/выродился в точку, найти параметр t невозможно')
             else:
                 sign = np.sign(num / den)
-                t = Fraction(f'{'-' if sign == -1 else ''}{abs(num)}/{abs(den)}')
+                t = Fraction(f'{'-' if sign == -1 else ''}{abs(num)}/{abs(den)}') * (-1)
                 print(f'Для данного отрезка параметр t равен {t}')
                 params[edge] = t
                 nums[edge] = num
@@ -135,8 +135,8 @@ class Clipping:
                 print('Верхний предел меньше нижнего, отрезок невидим!')
                 return None
             else:
-                new_pair = [(line[1][0] + d[0] * t_inf, line[1][1] + d[1] * t_inf), 
-                            (line[1][0] + d[0] * t_sup, line[1][1] + d[1] * t_sup)]
+                new_pair = [(line[0][0] + d[0] * t_inf, line[0][1] + d[1] * t_inf), 
+                            (line[0][0] + d[0] * t_sup, line[0][1] + d[1] * t_sup)]
                 print(f'Отрезок частично виден, видимая часть отрезка: {new_pair}')
                 return new_pair
 
