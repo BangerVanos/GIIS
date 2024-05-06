@@ -92,11 +92,13 @@ class Clipping:
         params: dict[tuple[Number, Number], Number] = {}
         nums: dict[tuple[Number, Number], Number] = {}
         dens: dict[tuple[Number, Number], Number] = {}
+        inn = cls.inner_normals(verts)
         for ind, edge in enumerate(edges):
             print('-'*30)
             print(f'Рассматриваемое ребро: {edge}')
             f = edge[0]
-            n = (-(edge[1][1] - edge[0][1]), edge[1][0] - edge[0][0])
+            # n = (-(edge[1][1] - edge[0][1]), edge[1][0] - edge[0][0])
+            n = inn[ind]
             print(f'Нормаль: {n}')
             w = (line[0][0] - f[0], line[0][1] - f[1])
             den = dot(d, n)
