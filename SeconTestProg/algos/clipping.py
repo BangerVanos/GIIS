@@ -15,11 +15,11 @@ class Clipping:
 
         prod = dx1 * dy2 - dx2 * dy1
         if prod == 0:
-            return 0
+            return prod, 0
         elif prod < 0:
-            return -1
+            return prod, -1
         else:
-            return 1
+            return prod, 1
     
     @classmethod
     def is_convex(cls, verts: Iterable[Iterable[Number]]) -> bool:
@@ -32,14 +32,14 @@ class Clipping:
             next = verts[(ind + 1) % len(verts)]
             print(f'Проверка векторов, образованных точками: {prev}-{cur} и {cur}-{next}')
             ccw = cls.ccw(prev, cur, next)
-            signs.append(ccw)
+            signs.append(ccw[1])
             sense = {
                 0: 'нулевой',
                 1: 'положительный',
                 -1: 'отрицательный'
             }
-            print(f'Произведение векторов равно: {ccw}k')
-            print(f'Знак произведения веторов: {sense[ccw]}')
+            print(f'Произведение векторов равно: {ccw[0]}k')
+            print(f'Знак произведения веторов: {sense[ccw[1]]}')
             print('-'*30)
         result = set(signs)
         if len(result) > 1:
