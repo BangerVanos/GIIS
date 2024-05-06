@@ -65,7 +65,7 @@ class Clipping:
             nnext = verts[(ind + 2) % len(verts)]
             nx = -(next[1] - cur[1])
             ny = next[0] - cur[0]
-            n_sign = nx * (nnext[0] - cur[0]) + ny * (nnext[1] - cur[1])
+            n_sign = np.sign(nx * (nnext[0] - cur[0]) + ny * (nnext[1] - cur[1]))
             print('-'*30)
             print(f'Нормаль для ребра из вершин: {(cur, next)}')
             if n_sign == -1:
